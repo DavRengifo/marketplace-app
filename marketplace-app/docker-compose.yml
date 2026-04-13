@@ -1,0 +1,14 @@
+#version: "3.8"
+
+services:
+  redis:
+    image: redis:alpine
+    container_name: marketplace_redis
+    ports:
+      - "6380:6379"
+    networks:
+      - marketplace_network
+
+networks:
+  marketplace_network:
+    driver: bridge
