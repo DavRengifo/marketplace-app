@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ActivityCard } from "@/components/ActivityCard";
+import { FiltersBar } from "@/components/FiltersBar";
+import Link from "next/link";
 
 type Activity = {
   id: number;
@@ -9,7 +12,27 @@ type Activity = {
   price: number;
   location: string;
   category: string;
+  imageUrl?: string | null;
+  bookingCount: number;
 };
+
+const heroDestinations = [
+  {
+    kicker: "Curated picks",
+    title: "Experiences for every kind of traveler",
+    copy: "Coastal adventures, food-led discoveries, cultural visits, and slower escapes in one place.",
+  },
+  {
+    kicker: "Global mix",
+    title: "From city icons to offbeat local moments",
+    copy: "The catalog now feels broader, more realistic, and more aligned with a real discovery marketplace.",
+  },
+  {
+    kicker: "Ready to scale",
+    title: "A stronger base for detail pages, maps, and user accounts",
+    copy: "The UI stays polished while making room for richer data and real product flows.",
+  },
+];
 
 export default function Home() {
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -18,66 +41,79 @@ export default function Home() {
 
   const [category, setCategory] = useState("");
   const [location, setLocation] = useState("");
-  const [sort, setSort] = useState("");
+  const [sort, setSort] = useState("popular");
   const [page, setPage] = useState(1);
 
   const [favorites, setFavorites] = useState<number[]>([]);
   const [showFavorites, setShowFavorites] = useState(false);
-
   const [booked, setBooked] = useState<number[]>([]);
-
   const [loading, setLoading] = useState(false);
 
-  // Favorites toggle
   const toggleFavorite = (id: number) => {
     setFavorites((prev) =>
-      prev.includes(id)
-        ? prev.filter((f) => f !== id)
-        : [...prev, id]
+      prev.includes(id) ? prev.filter((favoriteId) => favoriteId !== id) : [...prev, id]
     );
   };
 
-  // booking action
+  useEffect(() => {
+    const stored = localStorage.getItem("favorites");
+    if (stored) {
+      setFavorites(JSON.parse(stored));
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("favorites", JSON.stringify(favorites));
+  }, [favorites]);
+
   const handleBooking = async (id: number) => {
-    // instantaneous UI feedback
-    setBooked((prev) =>
-      prev.includes(id)
-        ? prev.filter((b) => b !== id)
-        : [...prev, id]
-    );
+    setBooked((prev) => (prev.includes(id) ? prev : [...prev, id]));
 
     try {
-      await fetch(`/api/activities/${id}/book`, {
+      const response = await fetch(`/api/activities/${id}/book`, {
         method: "POST",
       });
-    } catch (err) {
-      console.error("Booking error", err);
 
-      // rollback
-      setBooked((prev) =>
-        prev.includes(id)
-          ? prev.filter((b) => b !== id)
-          : [...prev, id]
+      if (!response.ok) {
+        throw new Error("Booking failed");
+      }
+
+      setActivities((current) =>
+        current.map((activity) =>
+          activity.id === id
+            ? { ...activity, bookingCount: activity.bookingCount + 1 }
+            : activity
+        )
       );
+    } catch (error) {
+      console.error("Booking error", error);
+      setBooked((prev) => prev.filter((bookedId) => bookedId !== id));
     }
   };
 
-  // Fetch activities with loading state and error handling
   useEffect(() => {
     const fetchActivities = async () => {
       setLoading(true);
 
       try {
-        const url = `/api/activities?category=${category}&location=${location}&sort=${sort}&page=${page}&limit=6`;
+        const params = new URLSearchParams({
+          category,
+          location,
+          sort,
+          page: String(page),
+          limit: "6",
+        });
 
-        const res = await fetch(url);
+        const response = await fetch(`/api/activities?${params.toString()}`);
 
-        if (!res.ok) throw new Error("API error");
+        if (!response.ok) {
+          throw new Error("API error");
+        }
 
-        const data = await res.json();
+        const data = await response.json();
         setActivities(data.results);
-      } catch (err) {
-        console.error("Fetch error:", err);
+      } catch (error) {
+        console.error("Fetch error:", error);
       } finally {
         setLoading(false);
       }
@@ -86,124 +122,194 @@ export default function Home() {
     fetchActivities();
   }, [category, location, sort, page]);
 
-  // Reset page when filters change
   useEffect(() => {
     setPage(1);
   }, [category, location, sort]);
 
-  // Fetch filter options
   useEffect(() => {
-  fetch("/api/filters")
-    .then((res) => res.json())
-    .then((data) => {
-      setCategories(data.categories);
-      setLocations(data.locations);
-    });
+    fetch("/api/filters")
+      .then((response) => response.json())
+      .then((data) => {
+        setCategories(data.categories);
+        setLocations(data.locations);
+      })
+      .catch((error) => {
+        console.error("Filters fetch error:", error);
+      });
   }, []);
 
-  // favorites filtering
   const filteredActivities = showFavorites
-    ? activities.filter((a) => favorites.includes(a.id))
+    ? activities.filter((activity) => favorites.includes(activity.id))
     : activities;
 
+  const favoriteCount = favorites.length;
+  const trendingActivities = [...activities]
+    .filter((activity) => activity.bookingCount > 0)
+    .sort((left, right) => right.bookingCount - left.bookingCount)
+    .slice(0, 3);
+
   return (
-    <main className="p-10">
-      <h1 className="text-2xl font-bold mb-6">Marketplace</h1>
-
-      {/* TOGGLE FAVORITES */}
-      <button
-        onClick={() => setShowFavorites((prev) => !prev)}
-        className="border px-4 py-2 rounded mb-4"
-      >
-        {showFavorites ? "Show all" : "Show favorites ❤️"}
-      </button>
-
-      {/* FILTERS */}
-      <div className="flex gap-4 mb-6 flex-wrap">
-        <select onChange={(e) => setCategory(e.target.value)}>
-          <option value="">All categories</option>
-          {categories.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
-
-        <select onChange={(e) => setLocation(e.target.value)}>
-        <option value="">All locations</option>
-        {locations.map((l) => (
-          <option key={l} value={l}>
-            {l}
-          </option>
-        ))}
-        </select>
-
-        <select onChange={(e) => setSort(e.target.value)}>
-          <option value="">Default</option>
-          <option value="price_asc">Price ↑</option>
-          <option value="price_desc">Price ↓</option>
-          <option value="popular">Popular</option>
-        </select>
-      </div>
-
-      {/* LOADING */}
-      {loading && <p>Loading...</p>}
-
-      {/* GRID */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        
-        {filteredActivities.map((activity) => (
-          <div key={activity.id} className="border rounded-xl p-4 shadow-sm hover:shadow-md hover:-translate-y-1 transition">
-
-            {/* IMAGE PLACEHOLDER */}
-            <div className="h-40 bg-gray-200 rounded mb-3"></div>
-
-            {/* FAVORITE */}
-            <button onClick={() => toggleFavorite(activity.id)}>
-              {favorites.includes(activity.id) ? "❤️" : "🤍"}
-            </button>
-
-            <h2 className="font-semibold text-lg">{activity.title}</h2>
-            <p className="text-sm text-gray-500">{activity.location}</p>
-            <p className="text-xs bg-gray-100 inline-block px-2 py-1 rounded mt-1">{activity.category}</p>
-            <p className="mt-2 text-sm">{activity.description}</p>
-            <p className="mt-4 text-lg font-bold">
-              {Number(activity.price).toFixed(2)}€
+    <main className="relative overflow-hidden">
+      <div className="page-shell">
+        <section className="hero-panel fade-in">
+          <div className="hero-copy">
+            <p className="eyebrow">Curated experiences worldwide</p>
+            <h1 className="hero-title">Discover memorable activities for every kind of trip.</h1>
+            <p className="hero-description">
+              Browse a more varied collection of outdoor adventures, culinary workshops,
+              cultural tours, and destination highlights across Europe and beyond.
             </p>
 
-            {/* BOOK BUTTON */}
-            <button
-              onClick={() => handleBooking(activity.id)}
-              className={`mt-3 w-full py-2 rounded transition ${
-                booked.includes(activity.id)
-                  ? "bg-green-600 text-white"
-                  : "bg-black text-white hover:bg-gray-800"
-              }`}
-            >
-              {booked.includes(activity.id) ? "Booked ✅" : "Book now"}
-            </button>
+            <div className="hero-actions">
+              <a href="#explore" className="btn-primary">
+                Explore experiences
+              </a>
+              <a href="#trending" className="btn-secondary">
+                See trending picks
+              </a>
+            </div>
 
+            <div className="hero-stats" aria-label="Marketplace highlights">
+              <div>
+                <span>{activities.length || 6}+</span>
+                Curated activities
+              </div>
+              <div>
+                <span>{locations.length || 5}</span>
+                Destinations available
+              </div>
+              <div>
+                <span>{favoriteCount}</span>
+                Saved by the visitor
+              </div>
+            </div>
           </div>
-        ))}
-      </div>
 
-      {/* PAGINATION */}
-      <div className="flex gap-4 mt-6 items-center">
-        <button
-          onClick={() => setPage((p) => Math.max(p - 1, 1))}
-          className="border px-4 py-2 rounded"
-        >
-          Previous
-        </button>
+          <div className="hero-collection">
+            {heroDestinations.map((highlight) => (
+              <article key={highlight.title} className="collection-card">
+                <p>{highlight.kicker}</p>
+                <h2>{highlight.title}</h2>
+                <span>{highlight.copy}</span>
+              </article>
+            ))}
+          </div>
+        </section>
 
-        <span>Page {page}</span>
+        <section id="trending" className="section-block fade-in">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Trending now</p>
+              <h2>Most booked experiences this week</h2>
+            </div>
+            <p>Popular picks surface quickly so visitors can spot the experiences people are booking most.</p>
+          </div>
 
-        <button
-          onClick={() => setPage((p) => p + 1)}
-          className="border px-4 py-2 rounded"
-        >
-          Next
-        </button>
+          <div className="trending-strip">
+            {trendingActivities.map((activity, index) => {
+              const imageSrc = activity.imageUrl ?? "/activities/biarritz-surf-session.jpg";
+
+              return (
+                <Link
+                  key={activity.id}
+                  href={`/activity/${activity.id}`}
+                  className="trending-card"
+                  style={{ backgroundImage: `linear-gradient(180deg, rgba(19, 18, 16, 0.08) 0%, rgba(19, 18, 16, 0.74) 100%), url("${imageSrc}")` }}
+                >
+                  <div className="trending-rank">0{index + 1}</div>
+                  <div className="trending-content">
+                    <span>{activity.location}</span>
+                    <h3>{activity.title}</h3>
+                    <p>
+                      {activity.bookingCount} bookings this week • {activity.category}
+                    </p>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+
+        <section id="explore" className="section-block">
+          <div className="section-heading section-heading-tight">
+            <div>
+              <p className="eyebrow">Explore</p>
+              <h2>Explore experiences</h2>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowFavorites((prev) => !prev)}
+              className={showFavorites ? "btn-primary" : "btn-secondary"}
+              aria-pressed={showFavorites}
+            >
+              {showFavorites ? "Show all experiences" : "Show ❤️ only"}
+            </button>
+          </div>
+
+          <FiltersBar
+            category={category}
+            categories={categories}
+            location={location}
+            locations={locations}
+            sort={sort}
+            onCategoryChange={setCategory}
+            onLocationChange={setLocation}
+            onSortChange={setSort}
+          />
+
+          {loading ? (
+            <div className="activities-grid" aria-label="Loading activities">
+              {Array.from({ length: 6 }).map((_, index) => (
+                <div key={index} className="skeleton-card">
+                  <div className="skeleton-media" />
+                  <div className="skeleton-line skeleton-line-wide" />
+                  <div className="skeleton-line skeleton-line-medium" />
+                  <div className="skeleton-line skeleton-line-short" />
+                </div>
+              ))}
+            </div>
+          ) : filteredActivities.length > 0 ? (
+            <div className="activities-grid">
+              {filteredActivities.map((activity) => (
+                <ActivityCard
+                  key={activity.id}
+                  activity={activity}
+                  isBooked={booked.includes(activity.id)}
+                  isFavorite={favorites.includes(activity.id)}
+                  onBook={() => handleBooking(activity.id)}
+                  onToggleFavorite={() => toggleFavorite(activity.id)}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="empty-state">
+              <p className="eyebrow">No match right now</p>
+              <h3>No experience matches the current filters.</h3>
+              <p>
+                Try another destination or category to see more of the catalog.
+              </p>
+            </div>
+          )}
+
+          <div className="pagination-bar">
+            <button
+              type="button"
+              onClick={() => setPage((current) => Math.max(current - 1, 1))}
+              className="btn-secondary"
+            >
+              Previous
+            </button>
+            <span>Page {page}</span>
+            <button
+              type="button"
+              onClick={() => setPage((current) => current + 1)}
+              className="btn-secondary"
+            >
+              Next
+            </button>
+          </div>
+        </section>
       </div>
     </main>
   );

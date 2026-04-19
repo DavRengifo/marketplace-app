@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { redis } from "@/lib/redis";
+import seedActivities from "@/lib/seed-activities.json";
 import { NextRequest } from "next/server";
 
 export async function GET(req: NextRequest) {
@@ -92,62 +93,14 @@ export async function GET(req: NextRequest) {
 
 
 export async function POST() {
+    await prisma.activity.deleteMany();
+
     await prisma.activity.createMany({
-        data: [
-            {
-                title: "Surf lesson",
-                description: "Learn surf",
-                price: 50,
-                location: "Biarritz",
-                category: "sport",
-            },
-            {
-                title: "City tour",
-                description: "Visit Paris",
-                price: 30,
-                location: "Paris",
-                category: "tour",
-            },
-            {
-                title: "Boat trip",
-                description: "Nice boat",
-                price: 100,
-                location: "Nice",
-                category: "boat",
-            },
-            {
-                title: "Yoga retreat",
-                description: "Relax",
-                price: 80,
-                location: "Bali",
-                category: "wellness",
-            },
-            {
-                title: "City tour",
-                description: "Visit London",
-                price: 35,
-                location: "London",
-                category: "tour",
-            },
-            {
-                title: "Boat trip",
-                description: "Marseille boat",
-                price: 75,
-                location: "Marseille",
-                category: "boat",
-            },
-            {
-                title: "Cooking lesson",
-                description: "Learn to cook french pastry",
-                price: 65,
-                location: "Paris",
-                category: "cooking",
-            },
-        ],
+      data: seedActivities,
     });
 
     // Invalidate cache by incrementing version
     await redis.incr("activities:version");
-    
-    return Response.json({ message: "seeded" });
+
+    return Response.json({ message: "database reset and seeded" });
 }
