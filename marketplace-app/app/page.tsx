@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { ActivityCard } from "@/components/ActivityCard";
 import { FiltersBar } from "@/components/FiltersBar";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 
 type Activity = {
   id: number;
@@ -14,30 +15,17 @@ type Activity = {
   category: string;
   imageUrl?: string | null;
   bookingCount: number;
+  latitude?: number | null;
+  longitude?: number | null;
 };
 
-const heroDestinations = [
-  {
-    kicker: "Curated picks",
-    title: "Experiences for every kind of traveler",
-    copy: "Coastal adventures, food-led discoveries, cultural visits, and slower escapes in one place.",
-  },
-  {
-    kicker: "Global mix",
-    title: "From city icons to offbeat local moments",
-    copy: "The catalog now feels broader, more realistic, and more aligned with a real discovery marketplace.",
-  },
-  {
-    kicker: "Ready to scale",
-    title: "A stronger base for detail pages, maps, and user accounts",
-    copy: "The UI stays polished while making room for richer data and real product flows.",
-  },
-];
+const ActivityMap = dynamic(() => import("@/components/Map"), { ssr: false });
 
 export default function Home() {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [locations, setLocations] = useState<string[]>([]);
+  const [mapActivities, setMapActivities] = useState<Activity[]>([]);
 
   const [category, setCategory] = useState("");
   const [location, setLocation] = useState("");
@@ -138,6 +126,17 @@ export default function Home() {
       });
   }, []);
 
+  useEffect(() => {
+    fetch("/api/activities?limit=100")
+      .then((response) => response.json())
+      .then((data) => {
+        setMapActivities(data.results);
+      })
+      .catch((error) => {
+        console.error("Map activities fetch error:", error);
+      });
+  }, []);
+
   const filteredActivities = showFavorites
     ? activities.filter((activity) => favorites.includes(activity.id))
     : activities;
@@ -184,16 +183,6 @@ export default function Home() {
               </div>
             </div>
           </div>
-
-          <div className="hero-collection">
-            {heroDestinations.map((highlight) => (
-              <article key={highlight.title} className="collection-card">
-                <p>{highlight.kicker}</p>
-                <h2>{highlight.title}</h2>
-                <span>{highlight.copy}</span>
-              </article>
-            ))}
-          </div>
         </section>
 
         <section id="trending" className="section-block fade-in">
@@ -228,6 +217,17 @@ export default function Home() {
               );
             })}
           </div>
+        </section>
+
+        <section className="section-block fade-in">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">Explore by location</p>
+              <h2>Find experiences on the map</h2>
+            </div>
+            <p>Click any marker to discover the activity.</p>
+          </div>
+          <ActivityMap activities={mapActivities} />
         </section>
 
         <section id="explore" className="section-block">
@@ -310,6 +310,7 @@ export default function Home() {
             </button>
           </div>
         </section>
+        
       </div>
     </main>
   );
