@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
   const skip = (page - 1) * limit;
 
   // Get cache version of the data if exists
-  const version = (await redis.get("activities:version")) || "1";
+  const version = (await redis.get<string>("activities:version")) || "1";
 
   // Caching with Redis : create UNIQUE cache key and checking if we have cached data for this key.
   const cacheKey = `activities:v${version}:${page}:${limit}:${category}:${location}:${sort}`;
@@ -24,8 +24,8 @@ export async function GET(req: NextRequest) {
 
   if (cached) {
     console.log("CACHE HIT");
-    return Response.json(JSON.parse(cached));
-    }
+    return Response.json(cached);
+  }
 
     console.log("CACHE MISS");
 
@@ -86,7 +86,7 @@ export async function GET(req: NextRequest) {
   };
 
   // Save cache for 60 seconds
-  await redis.set(cacheKey, JSON.stringify(response), "EX", 60);
+  await redis.set(cacheKey, response, { ex: 60 });
 
   return Response.json(response);
 }
