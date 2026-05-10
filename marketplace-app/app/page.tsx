@@ -5,6 +5,7 @@ import { ActivityCard } from "@/components/ActivityCard";
 import { FiltersBar } from "@/components/FiltersBar";
 import Link from "next/link";
 import dynamic from "next/dynamic";
+import { useSession, signIn } from "next-auth/react";
 
 type Activity = {
   id: number;
@@ -34,50 +35,50 @@ export default function Home() {
 
   const [favorites, setFavorites] = useState<number[]>([]);
   const [showFavorites, setShowFavorites] = useState(false);
-  const [booked, setBooked] = useState<number[]>([]);
   const [loading, setLoading] = useState(false);
 
+  const { data: session } = useSession();
+
   const toggleFavorite = (id: number) => {
+    if (!session) {
+      signIn("github");
+      return;
+    }
+
+    const isFavorite = favorites.includes(id);
+
     setFavorites((prev) =>
-      prev.includes(id) ? prev.filter((favoriteId) => favoriteId !== id) : [...prev, id]
+      isFavorite? prev.filter((favoriteId) => favoriteId !== id) : [...prev, id]
     );
-  };
 
-  useEffect(() => {
-    const stored = localStorage.getItem("favorites");
-    if (stored) {
-      setFavorites(JSON.parse(stored));
-    }
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem("favorites", JSON.stringify(favorites));
-  }, [favorites]);
-
-  const handleBooking = async (id: number) => {
-    setBooked((prev) => (prev.includes(id) ? prev : [...prev, id]));
-
-    try {
-      const response = await fetch(`/api/activities/${id}/book`, {
-        method: "POST",
-      });
-
-      if (!response.ok) {
-        throw new Error("Booking failed");
-      }
-
-      setActivities((current) =>
-        current.map((activity) =>
-          activity.id === id
-            ? { ...activity, bookingCount: activity.bookingCount + 1 }
-            : activity
-        )
+    fetch("/api/favorites", {
+      method: isFavorite? "DELETE" : "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ activityId: id }),
+    }).catch((error) => {
+      console.error("Favorite toggle error:", error);
+      setFavorites((prev) =>
+        isFavorite? [...prev, id] : prev.filter((favoriteId) => favoriteId !== id)
       );
-    } catch (error) {
-      console.error("Booking error", error);
-      setBooked((prev) => prev.filter((bookedId) => bookedId !== id));
-    }
+    });
   };
+
+  useEffect(() => {
+    if (!session) {
+      setFavorites([]);
+      return;
+    }
+    fetch("/api/favorites")
+    .then((response) => response.json())
+    .then((ids) => {
+      if (Array.isArray(ids)) {
+        setFavorites(ids);
+      }
+    })
+    .catch((error) => {
+      console.error("Favorites fetch error:", error);
+    });
+  }, [session]);
 
   useEffect(() => {
     const fetchActivities = async () => {
@@ -275,9 +276,7 @@ export default function Home() {
                 <ActivityCard
                   key={activity.id}
                   activity={activity}
-                  isBooked={booked.includes(activity.id)}
                   isFavorite={favorites.includes(activity.id)}
-                  onBook={() => handleBooking(activity.id)}
                   onToggleFavorite={() => toggleFavorite(activity.id)}
                 />
               ))}

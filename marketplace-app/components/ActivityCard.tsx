@@ -14,17 +14,13 @@ type Activity = {
 
 type ActivityCardProps = {
   activity: Activity;
-  isBooked: boolean;
   isFavorite: boolean;
-  onBook: () => void;
   onToggleFavorite: () => void;
 };
 
 export function ActivityCard({
   activity,
-  isBooked,
   isFavorite,
-  onBook,
   onToggleFavorite,
 }: ActivityCardProps) {
   const imageSrc = activity.imageUrl ?? "/activities/biarritz-surf-session.jpg";
@@ -88,13 +84,12 @@ export function ActivityCard({
             <p className="activity-price">{activity.price.toFixed(2)}€</p>
           </div>
 
-          <button
-            type="button"
-            onClick={onBook}
-            className={isBooked ? "btn-success" : "btn-primary"}
+          <Link
+            href={`/activity/${activity.id}`}
+            className="btn-primary"
           >
-            {isBooked ? "Booked" : "Book now"}
-          </button>
+            View & Book
+          </Link>
         </div>
       </div>
     </article>

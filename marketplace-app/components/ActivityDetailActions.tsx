@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSession, signIn } from "next-auth/react";
 
 type ActivityDetailActionsProps = {
   activityId: number;
-  title: string;
   location: string;
   category: string;
   price: number;
@@ -13,44 +13,75 @@ type ActivityDetailActionsProps = {
 
 export function ActivityDetailActions({
   activityId,
-  title,
   location,
   category,
   price,
   initialBookingCount,
 }: ActivityDetailActionsProps) {
+  const { data: session } = useSession();
   const [isFavorite, setIsFavorite] = useState(false);
   const [isBooked, setIsBooked] = useState(false);
   const [bookingCount, setBookingCount] = useState(initialBookingCount);
 
   useEffect(() => {
-    const favorites = JSON.parse(localStorage.getItem("favorites") ?? "[]") as number[];
-    const booked = JSON.parse(localStorage.getItem("bookedActivities") ?? "[]") as number[];
+    if (!session) {
+      setIsFavorite(false);
+      setIsBooked(false);
+      return;
+    }
 
-    setIsFavorite(favorites.includes(activityId));
-    setIsBooked(booked.includes(activityId));
-  }, [activityId]);
+    fetch("/api/favorites")
+      .then((response) => response.json())
+      .then((ids) => {
+        if (Array.isArray(ids)) {
+          setIsFavorite(ids.includes(activityId));
+        }
+      })
+      .catch((error) => {
+        console.error("Failed to fetch favorites", error);
+      });
+
+    fetch("/api/bookings")
+      .then((response) => response.json())
+      .then((ids) => {
+        if (Array.isArray(ids)) {
+          setIsBooked(ids.includes(activityId));
+        }
+      })
+      .catch((error) => {
+        console.error("Failed to fetch bookings", error);
+      });
+  }, [session, activityId]);
 
   const toggleFavorite = () => {
-    const favorites = JSON.parse(localStorage.getItem("favorites") ?? "[]") as number[];
-    const nextFavorites = favorites.includes(activityId)
-      ? favorites.filter((favoriteId) => favoriteId !== activityId)
-      : [...favorites, activityId];
+    if (!session) {
+      signIn("github");
+      return;
+    }
+    const next = !isFavorite;
+    setIsFavorite(next);
 
-    localStorage.setItem("favorites", JSON.stringify(nextFavorites));
-    setIsFavorite(nextFavorites.includes(activityId));
+    fetch("/api/favorites", {
+      method: next ? "POST" : "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ activityId }),
+    }).catch((error) => {
+      console.error("Favorite toggle error:", error);
+      setIsFavorite(!next);
+    });
   };
 
   const handleBooking = async () => {
+    if (!session) {
+      signIn("github");
+      return;
+    }
     if (isBooked) {
       return;
     }
 
     setIsBooked(true);
     setBookingCount((current) => current + 1);
-
-    const booked = JSON.parse(localStorage.getItem("bookedActivities") ?? "[]") as number[];
-    localStorage.setItem("bookedActivities", JSON.stringify([...new Set([...booked, activityId])]));
 
     try {
       const response = await fetch(`/api/activities/${activityId}/book`, {
@@ -62,8 +93,6 @@ export function ActivityDetailActions({
       }
     } catch (error) {
       console.error("Booking failed", error);
-      const nextBooked = booked.filter((bookedId) => bookedId !== activityId);
-      localStorage.setItem("bookedActivities", JSON.stringify(nextBooked));
       setIsBooked(false);
       setBookingCount((current) => Math.max(initialBookingCount, current - 1));
     }
@@ -105,11 +134,16 @@ export function ActivityDetailActions({
       </div>
 
       <div className="detail-action-stack">
-        <button type="button" onClick={handleBooking} className={isBooked ? "btn-success" : "btn-primary"}>
+        <button 
+          type="button" 
+          onClick={handleBooking} 
+          className={isBooked ? "btn-success" : "btn-primary"}
+          disabled={isBooked}
+        >
           {isBooked ? "Booked" : "Book this experience"}
         </button>
         <p className="detail-action-note">
-          {title} is now ready for favorite persistence and booking feedback directly from the detail page.
+          Free cancellation up to 24 hours before the experience.
         </p>
       </div>
     </aside>

@@ -77,7 +77,6 @@ export default async function ActivityDetailPage({
 
                     <ActivityDetailActions
                         activityId={activity.id}
-                        title={activity.title}
                         location={activity.location}
                         category={activity.category}
                         price={activity.price}
