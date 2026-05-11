@@ -18,12 +18,31 @@ export async function GET() {
             location: true,
             price: true,
             imageUrl: true,
-            cancellation: true,          
+            cancellation: true,
         },
       },
     },
     orderBy: {bookingDate: "asc"},
   });
 
-  return Response.json(bookings);
+  const now = new Date();
+
+  const withMeta = bookings.map((booking) => {
+    let isPast: boolean;
+    if (!booking.bookingDate) {
+      isPast = true;
+    } else if (!booking.startTime) {
+      const endOfDay = new Date(booking.bookingDate);
+      endOfDay.setUTCHours(23, 59, 59, 999);
+      isPast = endOfDay < now;
+    } else {
+      const [hours, minutes] = booking.startTime.split(":").map(Number);
+      const activityDatetime = new Date(booking.bookingDate);
+      activityDatetime.setUTCHours(hours, minutes, 0, 0);
+      isPast = activityDatetime < now;
+    }
+    return { ...booking, isPast };
+  });
+
+  return Response.json(withMeta);
 }

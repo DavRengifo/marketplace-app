@@ -36,7 +36,12 @@ export async function DELETE(
     if (booking.bookingDate) {
         const hoursMatch = booking.activity.cancellation?.match(/(\d+)\s*hours?/i);
         const cancellationHours = hoursMatch ? parseInt(hoursMatch[1]) : 24;
-        const deadline = new Date(booking.bookingDate.getTime() - cancellationHours * 60 * 60 * 1000);
+        const activityDatetime = new Date(booking.bookingDate);
+        if (booking.startTime) {
+            const [hours, minutes] = booking.startTime.split(":").map(Number);
+            activityDatetime.setUTCHours(hours, minutes, 0, 0);
+        }
+        const deadline = new Date(activityDatetime.getTime() - cancellationHours * 60 * 60 * 1000);
 
         if (new Date() > deadline) {
             return Response.json(
@@ -90,7 +95,9 @@ export async function PATCH (
         return Response.json({ error: "Invalid startTime format, expected HH:mm" }, { status: 400 });
     }
 
-    if (date < new Date()) {
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+    if (date < today) {
         return Response.json({ error: "Booking date must be in the future" }, { status: 400 });
     }
 
@@ -112,7 +119,12 @@ export async function PATCH (
     if (booking.bookingDate) {
         const hoursMatch = booking.activity.cancellation?.match(/(\d+)\s*hours?/i);
         const cancellationHours = hoursMatch ? parseInt(hoursMatch[1]) : 24;
-        const deadline = new Date(booking.bookingDate.getTime() - cancellationHours * 60 * 60 * 1000);
+        const activityDatetime = new Date(booking.bookingDate);
+        if (booking.startTime) {
+            const [hours, minutes] = booking.startTime.split(":").map(Number);
+            activityDatetime.setUTCHours(hours, minutes, 0, 0);
+        }
+        const deadline = new Date(activityDatetime.getTime() - cancellationHours * 60 * 60 * 1000);
 
         if (new Date() > deadline) {
             return Response.json(

@@ -16,6 +16,7 @@ export type Booking = {
     bookingDate: string;
     startTime: string;
     status: string;
+    isPast: boolean;
 };
 
 type BookingCardProps = {
@@ -38,14 +39,16 @@ export function BookingCard({ booking, onCancel, onModify, error }: BookingCardP
     const isCancelled = booking.status === "cancelled";
     const date = new Date(booking.bookingDate).toLocaleDateString("en-GB", {
         day: "numeric",
-        month: "long", 
-        year: "numeric" 
+        month: "long",
+        year: "numeric",
+        timeZone: "UTC",
     });
 
-    const today = new Date().toISOString().split("T")[0];
+    const today = new Date().toLocaleDateString("en-CA");
     const currentTime = new Date().toTimeString().slice(0, 5);
 
     const isSlotDisabled = (slot: string) => {
+        if (!modifyDate) return true;
         if (modifyDate !== today) return false;
         return slot <= currentTime;
     };

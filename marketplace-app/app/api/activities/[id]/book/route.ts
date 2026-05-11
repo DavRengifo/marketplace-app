@@ -37,7 +37,9 @@ export async function POST(
     );
   }
   
-  if (date < new Date()) {
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+  if (date < today) {
     return Response.json(
       { error: "Booking date must be in the future" },
       { status: 400 }

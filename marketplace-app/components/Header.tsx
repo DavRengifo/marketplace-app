@@ -49,9 +49,8 @@ export default function Header() {
                             </span>
                             <Link
                                 href="/bookings"
-                                className="hidden sm:block"
                                 style={{ fontSize: "14px", color: "var(--muted)", fontWeight: 600 }}
-                                >
+                            >
                                 My Bookings
                             </Link>
 
