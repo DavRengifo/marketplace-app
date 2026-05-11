@@ -67,13 +67,15 @@ model Favorite {
 }
 
 model Booking {
-  id         Int      @id @default(autoincrement())
-  userId     String
-  activityId Int
-  createdAt  DateTime @default(now())
-  status     String   @default("pending")
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  id            Int       @id @default(autoincrement())
+  userId        String
+  activityId    Int
+  bookingDate   DateTime?
+  startTime     String?
+  createdAt     DateTime  @default(now())
+  status        String    @default("pending")
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activity      Activity  @relation(fields: [activityId], references: [id], onDelete: Cascade)
 }
 
 model Activity {

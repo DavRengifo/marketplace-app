@@ -10,8 +10,20 @@ export async function GET() {
 
   const bookings = await prisma.booking.findMany({
     where: { userId: session.user.id },
-    select: { activityId: true },
+    include: {
+      activity: {
+        select: {
+            id: true,
+            title: true,
+            location: true,
+            price: true,
+            imageUrl: true,
+            cancellation: true,          
+        },
+      },
+    },
+    orderBy: {bookingDate: "asc"},
   });
 
-  return Response.json(bookings.map((b) => b.activityId));
+  return Response.json(bookings);
 }
