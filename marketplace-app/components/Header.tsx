@@ -47,6 +47,14 @@ export default function Header() {
                             >
                                 {session.user?.name}
                             </span>
+                            <Link
+                                href="/bookings"
+                                className="hidden sm:block"
+                                style={{ fontSize: "14px", color: "var(--muted)", fontWeight: 600 }}
+                                >
+                                My Bookings
+                            </Link>
+
                             <button
                                 className="btn-secondary"
                                 style={{ minHeight: "36px", padding: "0 16px", fontSize: "14px" }}
