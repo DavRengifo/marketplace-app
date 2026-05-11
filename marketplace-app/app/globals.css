@@ -825,6 +825,57 @@ button {
   font-weight: 700;
 }
 
+.tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 28px;
+}
+
+.tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.tab-btn:hover {
+  color: var(--foreground);
+}
+
+.tab-btn-active {
+  color: var(--foreground);
+  border-bottom-color: var(--foreground);
+}
+
+.tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  background: var(--background-strong);
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.tab-btn-active .tab-count {
+  background: var(--foreground);
+  color: var(--surface-strong);
+}
+
 .bookings-list {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

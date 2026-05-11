@@ -19,6 +19,7 @@ model User {
   sessions      Session[]
   favorites     Favorite[]
   bookings      Booking[]
+  payments      Payment[]
 }
 
 model Account {
@@ -76,6 +77,7 @@ model Booking {
   status        String    @default("pending")
   user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   activity      Activity  @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  payment       Payment?
 }
 
 model Activity {
@@ -98,4 +100,19 @@ model Activity {
   createdAt     DateTime @default(now())
   favorites     Favorite[]
   bookings      Booking[]
+}
+
+model Payment {
+  id                Int       @id @default(autoincrement())
+  bookingId         Int       @unique
+  userId            String
+  amount            Decimal
+  currency          String    @default("EUR")
+  status            String    @default("pending")
+  stripeSessionId   String?   @unique
+  paymentMethod     String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  booking           Booking   @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

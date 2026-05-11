@@ -5,9 +5,12 @@ import { useSession, signIn } from "next-auth/react";
 import Link from "next/link";
 import { BookingCard, type Booking } from "@/components/BookingCard";
 
+type Tab = "upcoming" | "past";
+
 export default function BookingsPage() {
   const { data: session, status } = useSession();
   const [bookings, setBookings] = useState<Booking[] | null>(null);
+  const [activeTab, setActiveTab] = useState<Tab>("upcoming");
   const [cancelErrors, setCancelErrors] = useState<{ [key: number]: string }>({});
 
   const isLoading = status === "loading" || (status === "authenticated" && bookings === null);
@@ -18,7 +21,7 @@ export default function BookingsPage() {
     fetch("/api/bookings")
       .then((response) => response.json())
       .then((data) => {
-          setBookings(Array.isArray(data) ? data : []);
+        setBookings(Array.isArray(data) ? data : []);
       })
       .catch((error) => {
         console.error("Failed to fetch bookings", error);
@@ -26,31 +29,31 @@ export default function BookingsPage() {
       });
   }, [session, status]);
 
-  const handleCancel = async (bookingId: number) => { 
+  const handleCancel = async (bookingId: number) => {
     try {
       const response = await fetch(`/api/bookings/${bookingId}`, {
         method: "DELETE",
       });
 
-        if (!response.ok) {
-            const data = await response.json();
-            setCancelErrors((prev) => ({ 
-                ...prev,
-                [bookingId]: data.error?? "Cancellation failed",
-            }));
-            return;
-        }
+      if (!response.ok) {
+        const data = await response.json();
+        setCancelErrors((prev) => ({
+          ...prev,
+          [bookingId]: data.error ?? "Cancellation failed",
+        }));
+        return;
+      }
 
-        setBookings((prev) =>
-            (prev ?? []).map((booking) =>
-                booking.id === bookingId ? { ...booking, status: "cancelled" } : booking
-            )
-        );
-        setCancelErrors((prev) => {
-          const next = { ...prev };
-          delete next[bookingId];
-          return next;
-        });
+      setBookings((prev) =>
+        (prev ?? []).map((booking) =>
+          booking.id === bookingId ? { ...booking, status: "cancelled" } : booking
+        )
+      );
+      setCancelErrors((prev) => {
+        const next = { ...prev };
+        delete next[bookingId];
+        return next;
+      });
     } catch (error) {
       console.error("Failed to cancel booking", error);
       setCancelErrors((prev) => ({
@@ -66,7 +69,7 @@ export default function BookingsPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ bookingDate: date, startTime: time }),
     });
-    
+
     if (!response.ok) {
       const data = await response.json();
       throw new Error(data.error ?? "Modification failed");
@@ -95,14 +98,18 @@ export default function BookingsPage() {
     return (
       <main className="page-shell">
         <section className="section-block">
-          <p style={{ color: "var(--muted)" }}>Please <button className="btn-link" onClick={() => signIn("github")}>sign in</button> to view your bookings.</p>
+          <p style={{ color: "var(--muted)" }}>
+            Please <button className="btn-link" onClick={() => signIn("github")}>sign in</button> to view your bookings.
+          </p>
         </section>
       </main>
     );
   }
 
   const bookingList = bookings ?? [];
-  
+  const upcoming = bookingList.filter((b) => !b.isPast && b.status !== "cancelled");
+  const past = bookingList.filter((b) => b.isPast || b.status === "cancelled");
+
   return (
     <main className="page-shell">
       <section className="section-block">
@@ -122,31 +129,64 @@ export default function BookingsPage() {
           </div>
         ) : (
           <>
-            <div className="bookings-list">
-              {bookingList
-                .filter((b) => b.status !== "cancelled")
-                .map((booking) => (
-                  <BookingCard
-                    key={booking.id}
-                    booking={booking}
-                    onCancel={handleCancel}
-                    onModify={handleModify}
-                    error={cancelErrors[booking.id]}
-                  />
-                ))}
+            <div className="tabs">
+              <button
+                type="button"
+                className={`tab-btn ${activeTab === "upcoming" ? "tab-btn-active" : ""}`}
+                onClick={() => setActiveTab("upcoming")}
+              >
+                Upcoming
+                {upcoming.length > 0 && (
+                  <span className="tab-count">{upcoming.length}</span>
+                )}
+              </button>
+              <button
+                type="button"
+                className={`tab-btn ${activeTab === "past" ? "tab-btn-active" : ""}`}
+                onClick={() => setActiveTab("past")}
+              >
+                Past
+                {past.length > 0 && (
+                  <span className="tab-count">{past.length}</span>
+                )}
+              </button>
             </div>
 
-            {bookingList.some((b) => b.status === "cancelled") && (
-              <>
-                <p className="eyebrow" style={{ marginTop: "40px" }}>Past cancellations</p>
-                <div className="bookings-list">
-                  {bookingList
-                    .filter((b) => b.status === "cancelled")
-                    .map((booking) => (
-                      <BookingCard key={booking.id} booking={booking} />
-                    ))}
+            {activeTab === "upcoming" && (
+              upcoming.length === 0 ? (
+                <div className="empty-state">
+                  <p className="eyebrow">All clear</p>
+                  <h3>No upcoming experiences.</h3>
+                  <Link href="/" className="btn-primary">Explore experiences</Link>
                 </div>
-              </>
+              ) : (
+                <div className="bookings-list">
+                  {upcoming.map((booking) => (
+                    <BookingCard
+                      key={booking.id}
+                      booking={booking}
+                      onCancel={handleCancel}
+                      onModify={handleModify}
+                      error={cancelErrors[booking.id]}
+                    />
+                  ))}
+                </div>
+              )
+            )}
+
+            {activeTab === "past" && (
+              past.length === 0 ? (
+                <div className="empty-state">
+                  <p className="eyebrow">Nothing yet</p>
+                  <h3>No past experiences.</h3>
+                </div>
+              ) : (
+                <div className="bookings-list">
+                  {past.map((booking) => (
+                    <BookingCard key={booking.id} booking={booking} />
+                  ))}
+                </div>
+              )
             )}
           </>
         )}

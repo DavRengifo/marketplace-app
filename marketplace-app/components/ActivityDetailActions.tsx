@@ -121,12 +121,13 @@ export function ActivityDetailActions({
   };
 
   const TIME_SLOTS = ["08:00", "10:00", "12:00", "14:00", "16:00", "18:00"];
-  const today = new Date().toISOString().split("T")[0];
+  const today = new Date().toLocaleDateString("en-CA");
   const currentTime = new Date().toTimeString().slice(0, 5);
 
   const isSlotDisabled = (slot: string) => {
+    if (!selectedDate) return true;
     if (selectedDate !== today) return false;
-    return slot <= currentTime;    
+    return slot <= currentTime;
   };
   const displayIsFavorite = !!session && isFavorite;
   const displayIsBooked = !!session && isBooked;
@@ -233,7 +234,7 @@ export function ActivityDetailActions({
           </>
           ) : selectedDate ? (
             <div className="btn-success" style={{ textAlign: "center", padding: "14px" }}>
-              ✓ Booked for {new Date(selectedDate).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })} at {selectedTime}
+              ✓ Booked for {new Date(selectedDate).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })} at {selectedTime}
             </div>
           ) : (
             <div className="btn-success" style={{ textAlign: "center", padding: "14px" }}>
