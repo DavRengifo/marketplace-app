@@ -891,6 +891,12 @@ button {
 }
 
 .status-pill-active {
+  background: rgba(209, 189, 145, 0.28);
+  color: var(--muted);
+  border: 1px solid rgba(129, 116, 94, 0.22);
+}
+
+.status-pill-paid {
   background: rgba(31, 157, 108, 0.18);
   color: var(--success);
   border: 1px solid rgba(31, 157, 108, 0.28);
