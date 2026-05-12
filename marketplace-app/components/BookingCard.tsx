@@ -37,6 +37,7 @@ export function BookingCard({ booking, onCancel, onModify, error }: BookingCardP
 
     const imageSrc = booking.activity.imageUrl ?? "/activities/biarritz-surf-session.jpg";
     const isCancelled = booking.status === "cancelled";
+    const isConfirmed = booking.status === "confirmed";
     const date = new Date(booking.bookingDate).toLocaleDateString("en-GB", {
         day: "numeric",
         month: "long",
@@ -99,8 +100,8 @@ export function BookingCard({ booking, onCancel, onModify, error }: BookingCardP
 
                     <div className="booking-topline">
                         <span className="eyebrow">{booking.activity.location}</span>
-                        <span className={`status-pill ${isCancelled ? "status-pill-cancelled" : "status-pill-active"}`}>
-                            {isCancelled ? "Cancelled" : "Confirmed"}
+                        <span className={`status-pill ${isCancelled ? "status-pill-cancelled" : isConfirmed ? "status-pill-paid" : "status-pill-active"}`}>
+                            {isCancelled ? "Cancelled" : isConfirmed ? "Paid" : "Pending"}
                         </span>
                     </div>
 
@@ -118,6 +119,15 @@ export function BookingCard({ booking, onCancel, onModify, error }: BookingCardP
 
             {!isCancelled && (onCancel || onModify) && (
                 <div style={{ padding: "12px 16px", display: "grid", gap: "10px", borderTop: "1px solid var(--line)" }}>
+                    {!booking.isPast && booking.status === "pending" && (
+                        <Link
+                            href={`/checkout/${booking.id}`}
+                            className="btn-primary"
+                            style={{ minHeight: "40px", padding: "0 16px", fontSize: "14px", flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}
+                        >
+                            Pay now
+                        </Link>
+                    )}
                     {isEditing ? (
                         <>
                             <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
