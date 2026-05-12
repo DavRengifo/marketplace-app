@@ -9,14 +9,9 @@ export async function POST (
         return Response.json({ error: "Missing stripeSessionId" }, { status: 400 });
     } 
     
-    // In production, I would verify the webhook signature and event type here
-    // using Stripe's SDK and my webhook secret, then update the payment and booking status accordingly.
-    // Production: stripe.webhooks.constructEvent(rawBody, sig, process.env.STRIPE_WEBHOOK_SECRET)
-    // Process: read raw body with req.text(), then give it to stripe.webhooks.constructEvent()
-    // with the signature and webhook secret, finally extract data from event.data.object rather than the body.
-    // This ensures that only Stripe can confirm a payment.
-    // We also verify that event.type === 'checkout.session.completed' since Stripe sends many different events 
-    // and retries if you return anything other than a 200."
+    // Production: replace req.json() with req.text() + stripe.webhooks.constructEvent(rawBody, sig, STRIPE_WEBHOOK_SECRET)
+    // to verify the request is genuinely from Stripe, then check event.type === "checkout.session.completed"
+    // and extract data from event.data.object. Stripe retries on non-200 — always return { received: true }.
     
     const payment = await prisma.payment.findUnique({
         where: { stripeSessionId: stripeSessionId },
@@ -30,8 +25,6 @@ export async function POST (
         return Response.json({ success: true });
     }
 
-    // Atomic architecture: 
-    // Update the payment status and booking status 
     await prisma.$transaction(async (prisma) => {
         await prisma.payment.update({
             where: { stripeSessionId: stripeSessionId },
