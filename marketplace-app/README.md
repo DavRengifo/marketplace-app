@@ -2,7 +2,7 @@
 
 A fullstack marketplace portfolio built with Next.js 16, Prisma, PostgreSQL, Redis, and Auth.js. Users can browse curated experiences, save favorites, book activities, and simulate a Stripe payment flow.
 
-**Live demo:** [harbor on Vercel](https://marketplace-app-ten-pi.vercel.app) <!-- update with your real URL -->
+**Live demo:** [harbor on Vercel](https://marketplace-app-kappa-khaki.vercel.app)
 
 ---
 
