@@ -1,5 +1,18 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import { isValidStartTime } from "@/lib/booking-utils";
+import { redis } from "@/lib/redis";
+
+function getDeadline(bookingDate: Date, startTime: string | null, cancellationText: string | null): Date {
+    const hoursMatch = cancellationText?.match(/(\d+)\s*hours?/i);
+    const hours = hoursMatch ? parseInt(hoursMatch[1]) : 24;
+    const dt = new Date(bookingDate);
+    if (startTime) {
+        const [h, m] = startTime.split(":").map(Number);
+        dt.setUTCHours(h, m, 0, 0);
+    }
+    return new Date(dt.getTime() - hours * 60 * 60 * 1000);
+}
 
 export async function DELETE(
     _req: Request,
@@ -34,18 +47,10 @@ export async function DELETE(
     }
 
     if (booking.bookingDate) {
-        const hoursMatch = booking.activity.cancellation?.match(/(\d+)\s*hours?/i);
-        const cancellationHours = hoursMatch ? parseInt(hoursMatch[1]) : 24;
-        const activityDatetime = new Date(booking.bookingDate);
-        if (booking.startTime) {
-            const [hours, minutes] = booking.startTime.split(":").map(Number);
-            activityDatetime.setUTCHours(hours, minutes, 0, 0);
-        }
-        const deadline = new Date(activityDatetime.getTime() - cancellationHours * 60 * 60 * 1000);
-
+        const deadline = getDeadline(booking.bookingDate, booking.startTime, booking.activity.cancellation ?? null);
         if (new Date() > deadline) {
             return Response.json(
-                { error: `Cancellation deadline has passed (${cancellationHours} hours before start time)` },
+                { error: "Cancellation deadline has passed" },
                 { status: 400 }
             );
         }
@@ -64,6 +69,8 @@ export async function DELETE(
             },
         },
     });
+
+    await redis.incr("activities:version");
 
     return Response.json({ success: true });
 }
@@ -90,9 +97,8 @@ export async function PATCH (
         return Response.json({ error: "Invalid bookingDate format" }, { status: 400 });
     }
 
-    const timePattern = /^([01]\d|2[0-3]):([0-5]\d)$/;
-    if (!timePattern.test(startTime)) {
-        return Response.json({ error: "Invalid startTime format, expected HH:mm" }, { status: 400 });
+    if (!isValidStartTime(startTime)) {
+        return Response.json({ error: "Invalid startTime format" }, { status: 400 });
     }
 
     const today = new Date();
@@ -117,18 +123,10 @@ export async function PATCH (
     }
 
     if (booking.bookingDate) {
-        const hoursMatch = booking.activity.cancellation?.match(/(\d+)\s*hours?/i);
-        const cancellationHours = hoursMatch ? parseInt(hoursMatch[1]) : 24;
-        const activityDatetime = new Date(booking.bookingDate);
-        if (booking.startTime) {
-            const [hours, minutes] = booking.startTime.split(":").map(Number);
-            activityDatetime.setUTCHours(hours, minutes, 0, 0);
-        }
-        const deadline = new Date(activityDatetime.getTime() - cancellationHours * 60 * 60 * 1000);
-
+        const deadline = getDeadline(booking.bookingDate, booking.startTime, booking.activity.cancellation ?? null);
         if (new Date() > deadline) {
             return Response.json(
-                { error: `Modification deadline has passed (${cancellationHours} hours before start time)` },
+                { error: "Modification deadline has passed" },
                 { status: 400 }
             );
         }

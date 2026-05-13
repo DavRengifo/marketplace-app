@@ -23,19 +23,15 @@ export async function GET(req: NextRequest) {
   const cached = await redis.get(cacheKey);
 
   if (cached) {
-    console.log("CACHE HIT");
     return Response.json(cached);
   }
 
-    console.log("CACHE MISS");
-
-  // Filters
   type WhereClause = {
-  category?: { in: string[] };
-  location?: string;
-};
+    category?: { in: string[] };
+    location?: string;
+  };
 
-    const where: WhereClause = {};
+  const where: WhereClause = {};
   
   if (category) {
     where.category = {
@@ -47,14 +43,13 @@ export async function GET(req: NextRequest) {
     where.location = location;
   }
 
-  // Sorting
   type OrderBy = {
     price?: "asc" | "desc";
     bookingCount?: "asc" | "desc";
     createdAt?: "asc" | "desc";
-    };
+  };
     
-    const orderBy: OrderBy = {};
+  const orderBy: OrderBy = {};
 
   if (sort === "price_asc") {
     orderBy.price = "asc";
@@ -92,14 +87,18 @@ export async function GET(req: NextRequest) {
 }
 
 
-export async function POST() {
+export async function POST(req: NextRequest) {
+    const adminKey = req.headers.get("x-admin-key");
+    if (adminKey !== process.env.ADMIN_SEED_KEY) {
+        return Response.json({ error: "Forbidden" }, { status: 403 });
+    }
     await prisma.activity.deleteMany();
 
     await prisma.activity.createMany({
       data: seedActivities,
     });
 
-    // Invalidate cache by incrementing version
+    // Increment version on any write to invalidate all cached pages atomically
     await redis.incr("activities:version");
 
     return Response.json({ message: "database reset and seeded" });

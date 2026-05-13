@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { isSlotAvailable } from "@/lib/booking-utils";
 
 export type Booking = {
     id: number;
@@ -48,11 +49,8 @@ export function BookingCard({ booking, onCancel, onModify, error }: BookingCardP
     const today = new Date().toLocaleDateString("en-CA");
     const currentTime = new Date().toTimeString().slice(0, 5);
 
-    const isSlotDisabled = (slot: string) => {
-        if (!modifyDate) return true;
-        if (modifyDate !== today) return false;
-        return slot <= currentTime;
-    };
+    const isSlotDisabled = (slot: string) =>
+        !isSlotAvailable(slot, modifyDate, today, currentTime);
 
     const handleModifySubmit = async () => {
         if (!modifyDate || !modifyTime) {

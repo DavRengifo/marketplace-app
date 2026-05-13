@@ -1,3 +1,4 @@
+/** Returns true if the time slot is available for selection. */
 export function isSlotAvailable(
     slot: string,
     selectedDate: string,
@@ -9,6 +10,7 @@ export function isSlotAvailable(
     return slot > currentTime;
 }
 
+/** Returns true if the booking datetime is in the past relative to now. */
 export function computeIsPast(
     bookingDate: Date | null,
     startTime: string | null,
@@ -24,6 +26,7 @@ export function computeIsPast(
     return bookingDateTime < now;
 }
 
+/** Returns true if the booking is cancellable respecting the cancellation policy. */
 export function computeIsCancellable(
     bookingDate: Date | null,
     startTime: string | null,
@@ -40,12 +43,14 @@ export function computeIsCancellable(
     return now < cancellationDeadline;
 }
 
+/** Returns true if the booking start time is valid. */
 export function isValidStartTime(startTime: string | null): boolean {
     if (!startTime) return false;
     const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
     return timeRegex.test(startTime);
 }
 
+/** Returns true if the booking datetime is valid. */
 export function isValidBookingDate(bookingDate: string | null): boolean {
     if (!bookingDate) return false;
     const date = new Date(bookingDate);

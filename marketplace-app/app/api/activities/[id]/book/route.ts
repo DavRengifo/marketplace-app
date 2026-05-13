@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { redis } from "@/lib/redis";
 import { auth } from "@/auth";
+import { isValidStartTime } from "@/lib/booking-utils";
 
 export async function POST(
   req: Request,
@@ -21,7 +22,7 @@ export async function POST(
     );
   }
 
-  const date= new Date(bookingDate);
+  const date = new Date(bookingDate);
 
   if (isNaN(date.getTime())) {
     return Response.json(
@@ -30,11 +31,8 @@ export async function POST(
     );
   }
 
-  if (!/^([01]\d|2[0-3]):([0-5]\d)$/.test(startTime)) {
-    return Response.json(
-      { error: "Invalid startTime format" },
-      { status: 400 }
-    );
+  if (!isValidStartTime(startTime)) {
+      return Response.json({ error: "Invalid startTime format" }, { status: 400 });
   }
   
   const today = new Date();
@@ -48,7 +46,6 @@ export async function POST(
 
   const { id } = await context.params;
 
-  // increment bookingCount
   const activity = await prisma.activity.update({
     where: { id: Number(id) },
     data: {

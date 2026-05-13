@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSession, signIn } from "next-auth/react";
+import { isSlotAvailable } from "@/lib/booking-utils";
 
 type ActivityDetailActionsProps = {
   activityId: number;
@@ -10,6 +11,8 @@ type ActivityDetailActionsProps = {
   price: number;
   initialBookingCount: number;
 };
+
+const TIME_SLOTS = ["08:00", "10:00", "12:00", "14:00", "16:00", "18:00"];
 
 export function ActivityDetailActions({
   activityId,
@@ -120,15 +123,11 @@ export function ActivityDetailActions({
     }
   };
 
-  const TIME_SLOTS = ["08:00", "10:00", "12:00", "14:00", "16:00", "18:00"];
   const today = new Date().toLocaleDateString("en-CA");
   const currentTime = new Date().toTimeString().slice(0, 5);
 
-  const isSlotDisabled = (slot: string) => {
-    if (!selectedDate) return true;
-    if (selectedDate !== today) return false;
-    return slot <= currentTime;
-  };
+  const isSlotDisabled = (slot: string) => 
+    !isSlotAvailable(slot, selectedDate, today, currentTime);
   const displayIsFavorite = !!session && isFavorite;
   const displayIsBooked = !!session && isBooked;
 
